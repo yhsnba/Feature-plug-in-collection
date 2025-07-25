@@ -1,6 +1,22 @@
 // API配置
+const getApiBaseUrl = () => {
+  // 如果有环境变量，优先使用
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL
+  }
+
+  // 根据当前访问的主机名动态确定API地址
+  const hostname = window.location.hostname
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:3004/api'
+  } else {
+    // 使用相同的IP地址但不同端口
+    return `http://${hostname}:3004/api`
+  }
+}
+
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3004/api',
+  BASE_URL: getApiBaseUrl(),
   TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3
 }

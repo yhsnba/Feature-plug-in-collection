@@ -45,6 +45,12 @@ api.interceptors.response.use(
     const requestId = error.config?.metadata?.requestId || 'unknown'
     console.error(`❌ API Response Error [${requestId}]:`, error)
 
+    // 检查是否是连接错误
+    if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+      console.error('🔌 服务器连接失败，请检查服务器是否正在运行')
+      return Promise.reject(new Error('服务器连接失败，请检查服务器是否正在运行'))
+    }
+
     // 使用统一的错误处理函数
     const errorMessage = handleError(error, 'API请求')
     return Promise.reject(new Error(errorMessage))

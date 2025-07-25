@@ -708,6 +708,77 @@ label:hover {
   backdrop-filter: blur(10px);
 }
 
+/* 服务器错误页面样式 */
+.server-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+}
+
+.server-error .error-content {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 3rem;
+  text-align: center;
+  max-width: 600px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+}
+
+.server-error .error-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.server-error h2 {
+  color: #2d3748;
+  margin-bottom: 1rem;
+  font-size: 2rem;
+}
+
+.server-error p {
+  color: #4a5568;
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+}
+
+.server-error .error-actions {
+  margin-bottom: 2rem;
+}
+
+.server-error .error-help {
+  text-align: left;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  border-radius: 10px;
+  margin-top: 2rem;
+}
+
+.server-error .error-help h4 {
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+.server-error .error-help ul {
+  color: #4a5568;
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.server-error .error-help li {
+  margin-bottom: 0.5rem;
+}
+
+.server-error .error-help code {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .tool-container {

@@ -5,12 +5,30 @@ const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
 
-const app = express();
-const PORT = 3004;
+// 加载环境变量
+require('dotenv').config();
 
-// 中间件
-app.use(cors());
-app.use(express.json());
+const app = express();
+const PORT = process.env.PORT || 3004;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5176';
+
+// 中间件配置
+app.use(cors({
+    origin: [
+        CORS_ORIGIN,
+        'http://localhost:5174',
+        'http://localhost:5175',
+        'http://localhost:5176',
+        'http://127.0.0.1:5174',
+        'http://192.168.1.101:5174',
+        'http://198.18.0.1:5174'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static('uploads'));
 
 // 确保上传目录存在
@@ -397,8 +415,11 @@ app.post('/api/copy-rename-files', (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`服务器运行在 http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`服务器运行在:`);
+    console.log(`  本地访问: http://localhost:${PORT}`);
+    console.log(`  网络访问: http://192.168.1.101:${PORT}`);
+    console.log(`  API文档: http://localhost:${PORT}/api/health`);
 });
 
 // 错误处理
