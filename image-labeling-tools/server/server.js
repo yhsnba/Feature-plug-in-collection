@@ -415,20 +415,49 @@ app.post('/api/copy-rename-files', (req, res) => {
     }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`服务器运行在:`);
-    console.log(`  本地访问: http://localhost:${PORT}`);
-    console.log(`  网络访问: http://192.168.1.101:${PORT}`);
-    console.log(`  API文档: http://localhost:${PORT}/api/health`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 服务器启动成功!`);
+    console.log(`📍 服务器运行在:`);
+    console.log(`  ✅ 本地访问: http://localhost:${PORT}`);
+    console.log(`  🌐 网络访问: http://192.168.1.101:${PORT}`);
+    console.log(`  📋 API文档: http://localhost:${PORT}/api/health`);
+    console.log(`  📁 文件服务: http://localhost:${PORT}/uploads`);
+    console.log(`⏰ 启动时间: ${new Date().toLocaleString()}`);
+    console.log(`🔄 进程ID: ${process.pid}`);
 });
 
-// 错误处理
+// 优雅关闭
+process.on('SIGTERM', () => {
+    console.log('📴 收到SIGTERM信号，正在优雅关闭服务器...');
+    server.close(() => {
+        console.log('✅ 服务器已关闭');
+        process.exit(0);
+    });
+});
+
+process.on('SIGINT', () => {
+    console.log('📴 收到SIGINT信号，正在优雅关闭服务器...');
+    server.close(() => {
+        console.log('✅ 服务器已关闭');
+        process.exit(0);
+    });
+});
+
+// 错误处理 - 改为记录错误但不立即退出
 process.on('uncaughtException', (error) => {
-    console.error('未捕获的异常:', error);
-    process.exit(1);
+    console.error('❌ 未捕获的异常:', error);
+    console.error('📍 错误堆栈:', error.stack);
+    // 在生产环境中可能需要退出，但开发环境中继续运行
+    if (process.env.NODE_ENV === 'production') {
+        process.exit(1);
+    }
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('未处理的Promise拒绝:', reason);
-    process.exit(1);
+    console.error('❌ 未处理的Promise拒绝:', reason);
+    console.error('📍 Promise:', promise);
+    // 在生产环境中可能需要退出，但开发环境中继续运行
+    if (process.env.NODE_ENV === 'production') {
+        process.exit(1);
+    }
 });

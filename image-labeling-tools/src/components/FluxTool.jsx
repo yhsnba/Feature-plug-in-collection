@@ -14,6 +14,8 @@ function FluxTool() {
   const [fixedLabel, setFixedLabel] = useState(false)
   const [processedFiles, setProcessedFiles] = useState([]) // 记录已处理的文件
   const [globalCounter, setGlobalCounter] = useState(1) // 全局计数器，跨组保持
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
 
 
   const leftFileRef = useRef()
@@ -29,13 +31,40 @@ function FluxTool() {
     if (!file) return
 
     try {
+      setIsUploading(true)
+      setUploadProgress(0)
+      addLog(`🔄 开始上传左图: ${file.name}`, 'info')
+
       utils.validateImageFile(file)
+
+      // 模拟上传进度
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval)
+            return 90
+          }
+          return prev + 10
+        })
+      }, 100)
+
       const response = await apiService.uploadSingle(file)
-      setLeftImage(response)
-      addLog(`✅ 左图上传成功: ${file.name}`, 'success')
-      notify.success(`左图上传成功: ${file.name}`)
-      updatePreview()
+
+      clearInterval(progressInterval)
+      setUploadProgress(100)
+
+      setTimeout(() => {
+        setLeftImage(response)
+        setIsUploading(false)
+        setUploadProgress(0)
+        addLog(`✅ 左图上传成功: ${file.name}`, 'success')
+        notify.success(`左图上传成功: ${file.name}`)
+        updatePreview()
+      }, 500)
+
     } catch (error) {
+      setIsUploading(false)
+      setUploadProgress(0)
       addLog(`❌ 左图上传失败: ${error.message}`, 'error')
       notify.error(`左图上传失败: ${error.message}`)
     }
@@ -260,10 +289,18 @@ function FluxTool() {
         borderRadius: '15px',
         backdropFilter: 'blur(10px)'
       }}>
-        <button className="btn btn-primary" onClick={() => leftFileRef.current?.click()}>
-          🖼️ 选择左图
+        <button
+          className="btn btn-primary"
+          onClick={() => leftFileRef.current?.click()}
+          disabled={isUploading}
+        >
+          {isUploading ? '🔄 上传中...' : '🖼️ 选择左图'}
         </button>
-        <button className="btn btn-primary" onClick={() => rightFilesRef.current?.click()}>
+        <button
+          className="btn btn-primary"
+          onClick={() => rightFilesRef.current?.click()}
+          disabled={isUploading}
+        >
           📁 选择右图文件夹
         </button>
         <button className="btn btn-secondary" onClick={handleOutputPathSelect}>
@@ -272,6 +309,46 @@ function FluxTool() {
         <button className="btn btn-secondary" onClick={resetCounter}>
           🔄 重置编号
         </button>
+
+        {/* 上传进度条 */}
+        {isUploading && (
+          <div style={{
+            gridColumn: '1 / -1',
+            background: 'rgba(255, 255, 255, 0.9)',
+            borderRadius: '12px',
+            padding: '1rem',
+            border: '2px solid rgba(102, 126, 234, 0.3)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '0.5rem'
+            }}>
+              <span style={{ fontWeight: '600', color: '#2d3748' }}>
+                📤 上传进度
+              </span>
+              <span style={{ fontWeight: '600', color: '#667eea' }}>
+                {uploadProgress}%
+              </span>
+            </div>
+            <div style={{
+              width: '100%',
+              height: '8px',
+              background: 'rgba(102, 126, 234, 0.1)',
+              borderRadius: '4px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                width: `${uploadProgress}%`,
+                height: '100%',
+                background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                borderRadius: '4px',
+                transition: 'width 0.3s ease'
+              }} />
+            </div>
+          </div>
+        )}
         <div style={{
           display: 'flex',
           alignItems: 'center',

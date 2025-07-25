@@ -23,7 +23,7 @@
     "build": "vite build",
     "preview": "vite preview --host",
     "server": "node server/server.js",
-    "start": "concurrently \"npm run server\" \"npm run dev\"",
+    "start": "concurrently --kill-others-on-fail \"npm run server\" \"npm run dev\"",
     "clean": "rimraf dist uploads/* !uploads/.gitkeep",
     "lint": "eslint src --ext .js,.jsx",
     "test": "echo \"No tests specified\" && exit 0"
