@@ -163,17 +163,27 @@ export const utils = {
 
   // 验证图片文件
   validateImageFile: (file) => {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
-    const maxSize = 10 * 1024 * 1024 // 10MB
-    
-    if (!allowedTypes.includes(file.type)) {
-      throw new Error('只支持 JPEG、PNG、GIF 格式的图片')
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+    const maxSize = 50 * 1024 * 1024 // 50MB
+
+    // 获取文件扩展名
+    const fileName = file.name.toLowerCase()
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext))
+
+    // 检查文件类型或扩展名
+    if (!allowedTypes.includes(file.type) && !hasValidExtension) {
+      throw new Error(`不支持的文件格式: ${file.name}。只支持 JPEG、PNG、GIF、WebP 格式的图片`)
     }
-    
+
     if (file.size > maxSize) {
-      throw new Error('文件大小不能超过 10MB')
+      throw new Error(`文件大小超过限制: ${file.name}。最大支持 50MB`)
     }
-    
+
+    if (file.size === 0) {
+      throw new Error(`文件为空: ${file.name}`)
+    }
+
     return true
   },
 

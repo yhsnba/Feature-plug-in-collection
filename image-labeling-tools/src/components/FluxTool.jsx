@@ -46,15 +46,40 @@ function FluxTool() {
     if (files.length === 0) return
 
     try {
-      // 验证所有文件
-      files.forEach(file => utils.validateImageFile(file))
+      // 过滤和验证图片文件
+      const validFiles = []
+      const invalidFiles = []
 
-      const response = await apiService.uploadMultiple(files)
+      files.forEach(file => {
+        try {
+          utils.validateImageFile(file)
+          validFiles.push(file)
+        } catch (error) {
+          invalidFiles.push({ name: file.name, error: error.message })
+        }
+      })
+
+      if (validFiles.length === 0) {
+        throw new Error('没有找到有效的图片文件')
+      }
+
+      if (invalidFiles.length > 0) {
+        addLog(`⚠️ 跳过 ${invalidFiles.length} 个无效文件`, 'warning')
+        invalidFiles.forEach(({ name, error }) => {
+          addLog(`  - ${name}: ${error}`, 'warning')
+        })
+      }
+
+      const response = await apiService.uploadMultiple(validFiles)
       const sortedFiles = response.files.sort(utils.naturalSort)
       setRightImages(sortedFiles)
       setCurrentIndex(0)
       addLog(`✅ 右图文件夹加载完成，共 ${sortedFiles.length} 张图像`, 'success')
-      notify.success(`右图文件夹加载完成，共 ${sortedFiles.length} 张图像`)
+      if (invalidFiles.length > 0) {
+        notify.success(`右图文件夹加载完成，共 ${sortedFiles.length} 张图像 (跳过 ${invalidFiles.length} 个无效文件)`)
+      } else {
+        notify.success(`右图文件夹加载完成，共 ${sortedFiles.length} 张图像`)
+      }
       updatePreview()
     } catch (error) {
       addLog(`❌ 右图上传失败: ${error.message}`, 'error')

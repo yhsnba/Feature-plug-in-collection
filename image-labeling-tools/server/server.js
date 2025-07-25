@@ -43,7 +43,10 @@ const upload = multer({
             cb(new Error('只允许上传图片文件'));
         }
     },
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB限制
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB限制
+        files: 100 // 最多100个文件
+    }
 });
 
 // 健康检查端点
@@ -85,26 +88,54 @@ app.post('/api/upload-single', upload.single('image'), (req, res) => {
     }
 });
 
-// 上传多个文件
-app.post('/api/upload-multiple', upload.array('images', 50), (req, res) => {
-    try {
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ error: '没有上传文件' });
+// 上传多个文件 - 使用更宽松的配置
+const uploadMultiple = multer({
+    storage: storage,
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+
+        if (mimetype && extname) {
+            return cb(null, true);
+        } else {
+            // 不拒绝，而是跳过无效文件
+            return cb(null, false);
         }
-        
-        const files = req.files.map(file => ({
-            filename: file.filename,
-            originalname: file.originalname,
-            path: `/uploads/${file.filename}`
-        }));
-        
-        res.json({
-            success: true,
-            files: files
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    },
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB限制
+        files: 100 // 最多100个文件
     }
+});
+
+app.post('/api/upload-multiple', (req, res) => {
+    uploadMultiple.any()(req, res, (err) => {
+        try {
+            if (err) {
+                console.error('上传错误:', err);
+                return res.status(500).json({ error: err.message });
+            }
+
+            if (!req.files || req.files.length === 0) {
+                return res.status(400).json({ error: '没有找到有效的图片文件' });
+            }
+
+            const files = req.files.map(file => ({
+                filename: file.filename,
+                originalname: file.originalname,
+                path: `/uploads/${file.filename}`
+            }));
+
+            res.json({
+                success: true,
+                files: files
+            });
+        } catch (error) {
+            console.error('多文件上传错误:', error);
+            res.status(500).json({ error: error.message });
+        }
+    });
 });
 
 // 图像拼接API - 使用Sharp进行真正的图像拼接
