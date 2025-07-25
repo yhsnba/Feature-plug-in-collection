@@ -133,13 +133,19 @@ export const useKeyboard = (keyMap) => {
       const alt = event.altKey
 
       for (const [shortcut, callback] of Object.entries(keyMap)) {
-        const [targetKey, ...modifiers] = shortcut.toLowerCase().split('+').reverse()
-        
-        const hasCtrl = modifiers.includes('ctrl') === ctrl
-        const hasShift = modifiers.includes('shift') === shift
-        const hasAlt = modifiers.includes('alt') === alt
-        
-        if (key === targetKey && hasCtrl && hasShift && hasAlt) {
+        const parts = shortcut.toLowerCase().split('+')
+        const targetKey = parts[parts.length - 1]
+        const modifiers = parts.slice(0, -1)
+
+        const needsCtrl = modifiers.includes('ctrl')
+        const needsShift = modifiers.includes('shift')
+        const needsAlt = modifiers.includes('alt')
+
+        // 检查键和修饰键是否匹配
+        if (key === targetKey &&
+            ctrl === needsCtrl &&
+            shift === needsShift &&
+            alt === needsAlt) {
           event.preventDefault()
           callback(event)
           break
