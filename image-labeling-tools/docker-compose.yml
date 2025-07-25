@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5174:5174"
+      - "3004:3004"
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+      - VITE_API_BASE_URL=http://localhost:3004/api
+    volumes:
+      - ./uploads:/app/uploads
+      - ./output:/app/output
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

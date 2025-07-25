@@ -46,6 +46,25 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB限制
 });
 
+// 健康检查端点
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: '1.0.0'
+    });
+});
+
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: '1.0.0'
+    });
+});
+
 // API路由
 
 // 上传单个文件

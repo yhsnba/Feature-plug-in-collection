@@ -1,21 +1,31 @@
 import axios from 'axios'
+import { API_CONFIG, ERROR_MESSAGES } from '../constants'
+import { handleError, retry } from '../utils'
 
-const API_BASE = 'http://localhost:3004/api'
+const API_BASE = API_CONFIG.BASE_URL
 
 // 创建axios实例
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 30000, // 30秒超时
+  timeout: API_CONFIG.TIMEOUT,
+  headers: {
+    'Content-Type': 'application/json'
+  }
 })
 
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`)
+    // 添加请求时间戳和请求ID
+    config.metadata = {
+      startTime: new Date(),
+      requestId: Date.now().toString(36) + Math.random().toString(36).substr(2)
+    }
+    console.log(`🚀 API Request [${config.metadata.requestId}]: ${config.method?.toUpperCase()} ${config.url}`)
     return config
   },
   (error) => {
-    console.error('API Request Error:', error)
+    console.error('❌ API Request Error:', error)
     return Promise.reject(error)
   }
 )
@@ -23,68 +33,72 @@ api.interceptors.request.use(
 // 响应拦截器
 api.interceptors.response.use(
   (response) => {
-    console.log(`API Response: ${response.status} ${response.config.url}`)
+    // 计算请求时间
+    const endTime = new Date()
+    const duration = endTime - response.config.metadata.startTime
+    const requestId = response.config.metadata.requestId
+
+    console.log(`✅ API Response [${requestId}]: ${response.status} ${response.config.url} (${duration}ms)`)
     return response
   },
   (error) => {
-    console.error('API Response Error:', error)
-    
-    // 统一错误处理
-    let errorMessage = '网络错误，请稍后重试'
-    
-    if (error.response) {
-      // 服务器返回错误状态码
-      errorMessage = error.response.data?.error || `服务器错误 (${error.response.status})`
-    } else if (error.request) {
-      // 请求发送但没有收到响应
-      errorMessage = '无法连接到服务器，请检查网络连接'
-    } else {
-      // 其他错误
-      errorMessage = error.message || '未知错误'
-    }
-    
-    // 可以在这里添加全局错误提示
-    console.error('Error Message:', errorMessage)
-    
+    const requestId = error.config?.metadata?.requestId || 'unknown'
+    console.error(`❌ API Response Error [${requestId}]:`, error)
+
+    // 使用统一的错误处理函数
+    const errorMessage = handleError(error, 'API请求')
     return Promise.reject(new Error(errorMessage))
   }
 )
 
+// 带重试的API请求包装器
+const withRetry = (apiCall, retries = API_CONFIG.RETRY_ATTEMPTS) => {
+  return retry(apiCall, retries, 1000)
+}
+
 // API方法
 export const apiService = {
   // 上传单个文件
-  uploadSingle: async (file) => {
-    const formData = new FormData()
-    formData.append('image', file)
-    const response = await api.post('/upload-single', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+  uploadSingle: async (file, onProgress) => {
+    return withRetry(async () => {
+      const formData = new FormData()
+      formData.append('image', file)
+      const response = await api.post('/upload-single', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: onProgress
+      })
+      return response.data
     })
-    return response.data
   },
 
   // 上传多个文件
-  uploadMultiple: async (files) => {
-    const formData = new FormData()
-    files.forEach(file => formData.append('images', file))
-    const response = await api.post('/upload-multiple', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+  uploadMultiple: async (files, onProgress) => {
+    return withRetry(async () => {
+      const formData = new FormData()
+      files.forEach(file => formData.append('images', file))
+      const response = await api.post('/upload-multiple', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: onProgress
+      })
+      return response.data
     })
-    return response.data
   },
 
   // 图像拼接
   mergeImages: async (leftImage, rightImage, outputPath = '', customName = '') => {
-    const response = await api.post('/merge-images', {
-      leftImage,
-      rightImage,
-      outputPath,
-      customName,
+    return withRetry(async () => {
+      const response = await api.post('/merge-images', {
+        leftImage,
+        rightImage,
+        outputPath,
+        customName,
+      })
+      return response.data
     })
-    return response.data
   },
 
   // 保存单张图片
