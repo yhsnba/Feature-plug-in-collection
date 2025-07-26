@@ -1,0 +1,51 @@
+{
+  "name": "image-labeling-tools",
+  "version": "1.0.0",
+  "description": "Modern web-based image annotation toolkit with React + Node.js",
+  "author": "yhsnba",
+  "license": "MIT",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yhsnba/Feature-plug-in-collection.git"
+  },
+  "keywords": [
+    "image-annotation",
+    "react",
+    "nodejs",
+    "image-processing",
+    "sharp",
+    "flux-lora",
+    "labeling-tool"
+  ],
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "server": "node server/server.js",
+    "start": "concurrently --kill-others-on-fail \"npm run server\" \"npm run dev\"",
+    "clean": "rimraf dist uploads/* !uploads/.gitkeep",
+    "lint": "eslint src --ext .js,.jsx",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "concurrently": "^9.2.0",
+    "rimraf": "^6.0.1",
+    "vite": "^7.0.4"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "sharp": "^0.34.3"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}
