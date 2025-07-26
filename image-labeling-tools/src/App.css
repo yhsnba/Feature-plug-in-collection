@@ -15,6 +15,56 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
+.app-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.back-btn {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  background: #5a6268;
+  transform: translateY(-2px);
+}
+
+.app-header-content {
+  flex: 1;
+}
+
+.project-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.5rem 0;
+}
+
+.project-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.project-description {
+  font-size: 0.9rem;
+  color: #888;
+  font-style: italic;
+}
+
 .app-header h1 {
   margin: 0;
   font-size: 2.5rem;

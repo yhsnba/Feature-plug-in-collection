@@ -10,7 +10,7 @@ import { useLocalStorage, useKeyboard } from './hooks'
 import { waitForServer, startHealthMonitoring } from './utils/healthCheck'
 import './App.css'
 
-function App() {
+function App({ project, onBackToManager }) {
   const [activeTab, setActiveTab] = useLocalStorage('activeTab', 'flux')
   const [isLoading, setIsLoading] = useState(true)
   const [serverStatus, setServerStatus] = useState('checking')
@@ -127,8 +127,29 @@ function App() {
     <ErrorBoundary>
       <div className="app">
         <header className="app-header">
-          <h1>🚀 图像标注工具集</h1>
-          <p>现代化的图像处理和标注工具</p>
+          <div className="app-header-top">
+            {onBackToManager && (
+              <button
+                className="btn btn-secondary back-btn"
+                onClick={onBackToManager}
+                title="返回项目管理"
+              >
+                ← 返回项目管理
+              </button>
+            )}
+            <div className="app-header-content">
+              <h1>🚀 图像标注工具集</h1>
+              {project && (
+                <div className="project-info">
+                  <span className="project-name">项目: {project.name}</span>
+                  {project.description && (
+                    <span className="project-description">{project.description}</span>
+                  )}
+                </div>
+              )}
+              <p>现代化的图像处理和标注工具</p>
+            </div>
+          </div>
           {activeTabInfo && (
             <div className="active-tool-info">
               <span className="tool-description">{activeTabInfo.description}</span>

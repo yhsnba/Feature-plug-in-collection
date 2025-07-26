@@ -82,3 +82,71 @@ export const DEFAULT_CONFIG = {
   AUTO_SAVE: false,
   SHOW_PREVIEW: true
 }
+
+// 项目管理配置
+export const PROJECT_CONFIG = {
+  STATUS: {
+    ACTIVE: 'active',
+    INACTIVE: 'inactive',
+    COMPLETED: 'completed',
+    ARCHIVED: 'archived'
+  },
+  TYPES: {
+    FLUX: 'flux',
+    KONTEXT: 'kontext',
+    TAG: 'tag',
+    CUSTOM: 'custom'
+  },
+  PRIORITIES: {
+    LOW: 'low',
+    MEDIUM: 'medium',
+    HIGH: 'high',
+    URGENT: 'urgent'
+  }
+}
+
+// 甲方管理配置
+export const CLIENT_CONFIG = {
+  STATUS: {
+    ACTIVE: 'active',
+    INACTIVE: 'inactive',
+    POTENTIAL: 'potential'
+  },
+  TYPES: {
+    ENTERPRISE: 'enterprise',
+    STARTUP: 'startup',
+    INDIVIDUAL: 'individual',
+    GOVERNMENT: 'government'
+  },
+  INDUSTRIES: {
+    ECOMMERCE: 'ecommerce',
+    AI_ML: 'ai_ml',
+    HEALTHCARE: 'healthcare',
+    EDUCATION: 'education',
+    FINANCE: 'finance',
+    MANUFACTURING: 'manufacturing',
+    OTHER: 'other'
+  }
+}
+
+// 部署配置
+export const DEPLOYMENT_CONFIG = {
+  ENVIRONMENTS: {
+    DEVELOPMENT: 'development',
+    STAGING: 'staging',
+    PRODUCTION: 'production'
+  },
+  PLATFORMS: {
+    DOCKER: 'docker',
+    VERCEL: 'vercel',
+    NETLIFY: 'netlify',
+    AWS: 'aws',
+    CUSTOM: 'custom'
+  },
+  STATUS: {
+    PENDING: 'pending',
+    DEPLOYING: 'deploying',
+    SUCCESS: 'success',
+    FAILED: 'failed'
+  }
+}

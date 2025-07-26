@@ -461,3 +461,147 @@ process.on('unhandledRejection', (reason, promise) => {
         process.exit(1);
     }
 });
+
+// 项目管理API
+const projectsFile = path.join(__dirname, 'data', 'projects.json');
+const clientsFile = path.join(__dirname, 'data', 'clients.json');
+const deploymentsFile = path.join(__dirname, 'data', 'deployments.json');
+
+// 确保数据目录存在
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+}
+
+// 读取JSON文件的辅助函数
+const readJsonFile = (filePath, defaultValue = []) => {
+    try {
+        if (fs.existsSync(filePath)) {
+            const data = fs.readFileSync(filePath, 'utf8');
+            return JSON.parse(data);
+        }
+        return defaultValue;
+    } catch (error) {
+        console.error(`Error reading ${filePath}:`, error);
+        return defaultValue;
+    }
+};
+
+// 写入JSON文件的辅助函数
+const writeJsonFile = (filePath, data) => {
+    try {
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+        return true;
+    } catch (error) {
+        console.error(`Error writing ${filePath}:`, error);
+        return false;
+    }
+};
+
+// 项目管理API端点
+app.get('/api/projects', (req, res) => {
+    const projects = readJsonFile(projectsFile, []);
+    res.json(projects);
+});
+
+app.post('/api/projects', (req, res) => {
+    const projects = readJsonFile(projectsFile, []);
+    const newProject = {
+        id: Date.now().toString(),
+        ...req.body,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    projects.push(newProject);
+
+    if (writeJsonFile(projectsFile, projects)) {
+        res.json(newProject);
+    } else {
+        res.status(500).json({ error: 'Failed to save project' });
+    }
+});
+
+app.put('/api/projects/:id', (req, res) => {
+    const projects = readJsonFile(projectsFile, []);
+    const projectIndex = projects.findIndex(p => p.id === req.params.id);
+
+    if (projectIndex === -1) {
+        return res.status(404).json({ error: 'Project not found' });
+    }
+
+    projects[projectIndex] = {
+        ...projects[projectIndex],
+        ...req.body,
+        updatedAt: new Date().toISOString()
+    };
+
+    if (writeJsonFile(projectsFile, projects)) {
+        res.json(projects[projectIndex]);
+    } else {
+        res.status(500).json({ error: 'Failed to update project' });
+    }
+});
+
+app.delete('/api/projects/:id', (req, res) => {
+    const projects = readJsonFile(projectsFile, []);
+    const filteredProjects = projects.filter(p => p.id !== req.params.id);
+
+    if (writeJsonFile(projectsFile, filteredProjects)) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to delete project' });
+    }
+});
+
+// 甲方管理API端点
+app.get('/api/clients', (req, res) => {
+    const clients = readJsonFile(clientsFile, []);
+    res.json(clients);
+});
+
+app.post('/api/clients', (req, res) => {
+    const clients = readJsonFile(clientsFile, []);
+    const newClient = {
+        id: Date.now().toString(),
+        ...req.body,
+        createdAt: new Date().toISOString()
+    };
+    clients.push(newClient);
+
+    if (writeJsonFile(clientsFile, clients)) {
+        res.json(newClient);
+    } else {
+        res.status(500).json({ error: 'Failed to save client' });
+    }
+});
+
+app.put('/api/clients/:id', (req, res) => {
+    const clients = readJsonFile(clientsFile, []);
+    const clientIndex = clients.findIndex(c => c.id === req.params.id);
+
+    if (clientIndex === -1) {
+        return res.status(404).json({ error: 'Client not found' });
+    }
+
+    clients[clientIndex] = {
+        ...clients[clientIndex],
+        ...req.body
+    };
+
+    if (writeJsonFile(clientsFile, clients)) {
+        res.json(clients[clientIndex]);
+    } else {
+        res.status(500).json({ error: 'Failed to update client' });
+    }
+});
+
+app.delete('/api/clients/:id', (req, res) => {
+    const clients = readJsonFile(clientsFile, []);
+    const filteredClients = clients.filter(c => c.id !== req.params.id);
+
+    if (writeJsonFile(clientsFile, filteredClients)) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to delete client' });
+    }
+});
