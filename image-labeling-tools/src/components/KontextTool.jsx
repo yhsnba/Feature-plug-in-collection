@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { apiService, utils } from '../services/api'
 import { notify } from './Notification'
 
@@ -15,7 +15,11 @@ function KontextTool() {
   const [singleTargetMode, setSingleTargetMode] = useState(false) // 新增：单张目标图模式
   const [singleOriginalImage, setSingleOriginalImage] = useState(null) // 新增：单张原图
   const [singleTargetImage, setSingleTargetImage] = useState(null) // 新增：单张目标图
-  const [globalCounter, setGlobalCounter] = useState(1) // 全局计数器，跨组保持
+  const [globalCounter, setGlobalCounter] = useState(() => {
+    // 从localStorage读取全局计数器，如果没有则默认为1
+    const saved = localStorage.getItem('kontextTool_globalCounter')
+    return saved ? parseInt(saved) : 1
+  }) // 全局计数器，跨组保持
 
   const originalFilesRef = useRef()
   const targetFilesRef = useRef()
@@ -26,6 +30,11 @@ function KontextTool() {
     const timestamp = new Date().toLocaleTimeString()
     setLog(prev => [...prev, { message, type, timestamp }])
   }
+
+  // 持久化全局计数器到localStorage
+  useEffect(() => {
+    localStorage.setItem('kontextTool_globalCounter', globalCounter.toString())
+  }, [globalCounter])
 
   // 原图模式切换处理
   const handleOriginalModeSwitch = (mode) => {
@@ -73,8 +82,18 @@ function KontextTool() {
     if (newStart && !isNaN(newStart) && parseInt(newStart) > 0) {
       const startNumber = parseInt(newStart)
       setGlobalCounter(startNumber)
+      localStorage.setItem('kontextTool_globalCounter', startNumber.toString())
       addLog(`🔄 计数器重置为: ${startNumber}`, 'info')
       notify.success(`计数器重置为: ${startNumber}`)
+    }
+  }
+
+  const clearCounter = () => {
+    if (confirm('确定要清除计数器历史记录吗？这将重置为1。')) {
+      setGlobalCounter(1)
+      localStorage.removeItem('kontextTool_globalCounter')
+      addLog(`🗑️ 计数器历史已清除，重置为1`, 'info')
+      notify.success('计数器历史已清除')
     }
   }
 
@@ -328,6 +347,17 @@ function KontextTool() {
       <div className="tool-header">
         <h2>📷 KontextLora 标注工具</h2>
         <p>同时显示原图和目标图，为图像对添加标签</p>
+        <div style={{
+          fontSize: '0.9rem',
+          color: '#666',
+          marginTop: '0.5rem',
+          padding: '0.5rem',
+          background: 'rgba(102, 126, 234, 0.1)',
+          borderRadius: '8px',
+          border: '1px solid rgba(102, 126, 234, 0.2)'
+        }}>
+          🔢 全局计数器：{globalCounter} （下一张将保存为第 {globalCounter} 对）
+        </div>
       </div>
 
       {/* 状态显示区域 */}
@@ -603,6 +633,9 @@ function KontextTool() {
         </button>
         <button className="btn btn-secondary" onClick={resetCounter}>
           🔄 重置编号
+        </button>
+        <button className="btn btn-warning" onClick={clearCounter}>
+          🗑️ 清除历史
         </button>
         <button
           className="btn btn-success"
