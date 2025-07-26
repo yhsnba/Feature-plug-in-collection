@@ -15,6 +15,7 @@ function KontextTool() {
   const [singleTargetMode, setSingleTargetMode] = useState(false) // 新增：单张目标图模式
   const [singleOriginalImage, setSingleOriginalImage] = useState(null) // 新增：单张原图
   const [singleTargetImage, setSingleTargetImage] = useState(null) // 新增：单张目标图
+  const [globalCounter, setGlobalCounter] = useState(1) // 全局计数器，跨组保持
 
   const originalFilesRef = useRef()
   const targetFilesRef = useRef()
@@ -64,6 +65,16 @@ function KontextTool() {
       setOutputPath(path.trim())
       addLog(`📁 输出路径设置为: ${path.trim()}`, 'info')
       notify.success(`输出路径设置成功: ${path.trim()}`)
+    }
+  }
+
+  const resetCounter = () => {
+    const newStart = prompt('请输入新的起始编号：', '1')
+    if (newStart && !isNaN(newStart) && parseInt(newStart) > 0) {
+      const startNumber = parseInt(newStart)
+      setGlobalCounter(startNumber)
+      addLog(`🔄 计数器重置为: ${startNumber}`, 'info')
+      notify.success(`计数器重置为: ${startNumber}`)
     }
   }
 
@@ -186,8 +197,8 @@ function KontextTool() {
     }
 
     try {
-      // 使用当前索引+1作为文件名（第几对）
-      const pairNumber = (currentIndex + 1).toString()
+      // 使用全局计数器作为文件名
+      const pairNumber = globalCounter.toString()
 
       // 保存标签文件
       await apiService.saveLabel(pairNumber, label.trim(), outputPath)
@@ -230,8 +241,11 @@ function KontextTool() {
       const newProgress = Math.round(((currentIndex + 1) / totalImages) * 100)
       setProgress(newProgress)
 
-      addLog(`✅ 保存：第 ${currentIndex + 1} 对图像和标签`, 'success')
-      notify.success(`第 ${currentIndex + 1} 对图像和标签已成功保存！`)
+      addLog(`✅ 保存：第 ${globalCounter} 对图像和标签`, 'success')
+      notify.success(`第 ${globalCounter} 对图像和标签已成功保存！`)
+
+      // 增加全局计数器
+      setGlobalCounter(globalCounter + 1)
 
       // 清空输入并移动到下一对图像
       if (!fixedLabel) {
@@ -313,6 +327,34 @@ function KontextTool() {
         <h2>📷 KontextLora 标注工具</h2>
         <p>同时显示原图和目标图，为图像对添加标签</p>
       </div>
+
+      {/* 状态显示区域 */}
+      {((!singleOriginalMode && !singleTargetMode) ||
+        (singleOriginalMode && !singleTargetMode) ||
+        (!singleOriginalMode && singleTargetMode)) && (
+        <div style={{
+          background: 'rgba(102, 126, 234, 0.1)',
+          borderRadius: '12px',
+          padding: '1rem',
+          marginBottom: '1rem',
+          textAlign: 'center',
+          border: '2px solid rgba(102, 126, 234, 0.2)'
+        }}>
+          <span style={{
+            fontWeight: '600',
+            color: '#2d3748',
+            fontSize: '1.1rem'
+          }}>
+            {singleOriginalMode && !singleTargetMode ? (
+              <>📌 当前组：第 {currentIndex + 1} 张 / 共 {targetImages.length} 张<br/>🔢 下一张编号：第 {globalCounter} 张</>
+            ) : !singleOriginalMode && singleTargetMode ? (
+              <>📌 当前组：第 {currentIndex + 1} 张 / 共 {originalImages.length} 张<br/>🔢 下一张编号：第 {globalCounter} 张</>
+            ) : (
+              <>📌 当前组：第 {currentIndex + 1} 张 / 共 {Math.min(originalImages.length, targetImages.length)} 张<br/>🔢 下一张编号：第 {globalCounter} 张</>
+            )}
+          </span>
+        </div>
+      )}
 
       <div style={{
         display: 'grid',
@@ -550,37 +592,12 @@ function KontextTool() {
         </div>
       </div>
 
-      {/* 状态显示区域 */}
-      {((!singleOriginalMode && !singleTargetMode) ||
-        (singleOriginalMode && !singleTargetMode) ||
-        (!singleOriginalMode && singleTargetMode)) && (
-        <div style={{
-          background: 'rgba(102, 126, 234, 0.1)',
-          borderRadius: '12px',
-          padding: '1rem',
-          marginBottom: '1rem',
-          textAlign: 'center',
-          border: '2px solid rgba(102, 126, 234, 0.2)'
-        }}>
-          <span style={{
-            fontWeight: '600',
-            color: '#2d3748',
-            fontSize: '1.1rem'
-          }}>
-            {singleOriginalMode && !singleTargetMode ? (
-              <>📌 当前组：第 {currentIndex + 1} 张 / 共 {targetImages.length} 张<br/>🔢 下一张编号：第 {currentIndex + 1} 张</>
-            ) : !singleOriginalMode && singleTargetMode ? (
-              <>📌 当前组：第 {currentIndex + 1} 张 / 共 {originalImages.length} 张<br/>🔢 下一张编号：第 {currentIndex + 1} 张</>
-            ) : (
-              <>📌 当前组：第 {currentIndex + 1} 张 / 共 {Math.min(originalImages.length, targetImages.length)} 张<br/>🔢 下一张编号：第 {currentIndex + 1} 张</>
-            )}
-          </span>
-        </div>
-      )}
-
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <button className="btn btn-secondary" onClick={handleOutputPathSelect}>
           📂 设置输出路径
+        </button>
+        <button className="btn btn-secondary" onClick={resetCounter}>
+          🔄 重置编号
         </button>
         <button
           className="btn btn-success"
@@ -592,7 +609,7 @@ function KontextTool() {
             (!singleTargetMode && (!targetImages[currentIndex]))
           }
         >
-          💾 保存{(singleOriginalMode && singleTargetMode) ? '' : `第 ${currentIndex + 1} 对`}
+          💾 保存第 {globalCounter} 对
         </button>
 
         {/* 只在非单张对单张模式下显示导航按钮 */}
