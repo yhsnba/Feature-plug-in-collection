@@ -96,7 +96,7 @@ function KontextTool() {
     try {
       utils.validateImageFile(file)
       const response = await apiService.uploadSingle(file)
-      setSingleOriginalImage(response.file)
+      setSingleOriginalImage(response)
       addLog(`✅ 单张原图加载成功: ${file.name}`, 'success')
       notify.success(`单张原图加载成功: ${file.name}`)
     } catch (error) {
@@ -113,7 +113,7 @@ function KontextTool() {
     try {
       utils.validateImageFile(file)
       const response = await apiService.uploadSingle(file)
-      setSingleTargetImage(response.file)
+      setSingleTargetImage(response)
       setCurrentIndex(0) // 重置索引
       addLog(`✅ 单张目标图加载成功: ${file.name}`, 'success')
       notify.success(`单张目标图加载成功: ${file.name}`)
@@ -376,6 +376,10 @@ function KontextTool() {
                   src={`http://localhost:3004${singleOriginalImage.path}`}
                   alt="单张原图"
                   className="image-preview"
+                  onError={(e) => {
+                    console.error('图片加载失败:', e.target.src)
+                    console.log('singleOriginalImage:', singleOriginalImage)
+                  }}
                 />
               ) : (
                 <div style={{
@@ -464,6 +468,10 @@ function KontextTool() {
                   src={`http://localhost:3004${singleTargetImage.path}`}
                   alt="单张目标图"
                   className="image-preview"
+                  onError={(e) => {
+                    console.error('目标图加载失败:', e.target.src)
+                    console.log('singleTargetImage:', singleTargetImage)
+                  }}
                 />
               ) : (
                 <div style={{
