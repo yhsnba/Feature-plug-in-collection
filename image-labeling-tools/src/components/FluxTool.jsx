@@ -354,14 +354,18 @@ function FluxTool() {
           alignItems: 'center',
           justifyContent: 'center',
           background: 'rgba(102, 126, 234, 0.1)',
-          borderRadius: '12px',
-          padding: '1rem',
-          border: '2px solid rgba(102, 126, 234, 0.2)'
+          borderRadius: '15px',
+          padding: '1.5rem 3rem',
+          border: '2px solid rgba(102, 126, 234, 0.2)',
+          minWidth: '400px',
+          margin: '0 auto'
         }}>
           <span style={{
             fontWeight: '600',
             color: '#2d3748',
-            fontSize: '1.1rem'
+            fontSize: '1.1rem',
+            textAlign: 'center',
+            lineHeight: '1.6'
           }}>
             📌 当前组：第 {currentIndex + 1} 张 / 共 {rightImages.length} 张<br/>
             🔢 下一张编号：第 {globalCounter} 张

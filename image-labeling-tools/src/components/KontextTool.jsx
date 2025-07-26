@@ -366,16 +366,19 @@ function KontextTool() {
         (!singleOriginalMode && singleTargetMode)) && (
         <div style={{
           background: 'rgba(102, 126, 234, 0.1)',
-          borderRadius: '12px',
-          padding: '1rem',
+          borderRadius: '15px',
+          padding: '1.5rem 3rem',
           marginBottom: '1rem',
           textAlign: 'center',
-          border: '2px solid rgba(102, 126, 234, 0.2)'
+          border: '2px solid rgba(102, 126, 234, 0.2)',
+          minWidth: '400px',
+          margin: '0 auto 1rem auto'
         }}>
           <span style={{
             fontWeight: '600',
             color: '#2d3748',
-            fontSize: '1.1rem'
+            fontSize: '1.1rem',
+            lineHeight: '1.6'
           }}>
             {singleOriginalMode && !singleTargetMode ? (
               // 单张原图 + 目标图文件夹：按目标图数量计数
