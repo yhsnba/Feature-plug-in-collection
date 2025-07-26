@@ -245,7 +245,9 @@ function KontextTool() {
       notify.success(`第 ${globalCounter} 对图像和标签已成功保存！`)
 
       // 增加全局计数器
-      setGlobalCounter(globalCounter + 1)
+      const newCounter = globalCounter + 1
+      setGlobalCounter(newCounter)
+      addLog(`🔢 全局计数器更新：${globalCounter} → ${newCounter}`, 'info')
 
       // 清空输入并移动到下一对图像
       if (!fixedLabel) {
@@ -346,10 +348,13 @@ function KontextTool() {
             fontSize: '1.1rem'
           }}>
             {singleOriginalMode && !singleTargetMode ? (
+              // 单张原图 + 目标图文件夹：按目标图数量计数
               <>📌 当前组：第 {currentIndex + 1} 张 / 共 {targetImages.length} 张<br/>🔢 下一张编号：第 {globalCounter} 张</>
             ) : !singleOriginalMode && singleTargetMode ? (
+              // 原图文件夹 + 单张目标图：按原图数量计数
               <>📌 当前组：第 {currentIndex + 1} 张 / 共 {originalImages.length} 张<br/>🔢 下一张编号：第 {globalCounter} 张</>
             ) : (
+              // 文件夹 + 文件夹：按最小数量计数
               <>📌 当前组：第 {currentIndex + 1} 张 / 共 {Math.min(originalImages.length, targetImages.length)} 张<br/>🔢 下一张编号：第 {globalCounter} 张</>
             )}
           </span>
