@@ -11,13 +11,36 @@ function KontextTool() {
   const [outputPath, setOutputPath] = useState('')
   const [fixedLabel, setFixedLabel] = useState(false)
   const [log, setLog] = useState([])
+  const [singleImageMode, setSingleImageMode] = useState(false) // 新增：单张图片模式
+  const [singleOriginalImage, setSingleOriginalImage] = useState(null) // 新增：单张原图
+  const [singleTargetImage, setSingleTargetImage] = useState(null) // 新增：单张目标图
 
   const originalFilesRef = useRef()
   const targetFilesRef = useRef()
+  const singleOriginalRef = useRef() // 新增：单张原图选择引用
+  const singleTargetRef = useRef() // 新增：单张目标图选择引用
 
   const addLog = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString()
     setLog(prev => [...prev, { message, type, timestamp }])
+  }
+
+  // 模式切换处理
+  const handleModeSwitch = (mode) => {
+    setSingleImageMode(mode)
+    setCurrentIndex(0)
+    if (!fixedLabel) {
+      setLabel('')
+    }
+
+    if (mode) {
+      addLog('🔄 切换到单张模式', 'info')
+    } else {
+      addLog('🔄 切换到文件夹模式', 'info')
+      // 清空单张图片数据
+      setSingleOriginalImage(null)
+      setSingleTargetImage(null)
+    }
   }
 
   const handleOutputPathSelect = () => {
@@ -50,6 +73,41 @@ function KontextTool() {
     }
   }
 
+  // 新增：处理单张原图上传
+  const handleSingleOriginalUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    try {
+      utils.validateImageFile(file)
+      const response = await apiService.uploadSingle(file)
+      setSingleOriginalImage(response.file)
+      addLog(`✅ 单张原图加载成功: ${file.name}`, 'success')
+      notify.success(`单张原图加载成功: ${file.name}`)
+    } catch (error) {
+      addLog(`❌ 单张原图上传失败: ${error.message}`, 'error')
+      notify.error(`单张原图上传失败: ${error.message}`)
+    }
+  }
+
+  // 新增：处理单张目标图上传
+  const handleSingleTargetUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    try {
+      utils.validateImageFile(file)
+      const response = await apiService.uploadSingle(file)
+      setSingleTargetImage(response.file)
+      setCurrentIndex(0) // 重置索引
+      addLog(`✅ 单张目标图加载成功: ${file.name}`, 'success')
+      notify.success(`单张目标图加载成功: ${file.name}`)
+    } catch (error) {
+      addLog(`❌ 单张目标图上传失败: ${error.message}`, 'error')
+      notify.error(`单张目标图上传失败: ${error.message}`)
+    }
+  }
+
   const handleTargetImagesUpload = async (e) => {
     const files = Array.from(e.target.files)
     if (files.length === 0) return
@@ -72,11 +130,36 @@ function KontextTool() {
   }
 
   const saveLabel = async () => {
-    if (!originalImages[currentIndex] || !targetImages[currentIndex] || !label.trim()) {
-      const message = '⚠️ 请确保选择了原图、目标图并输入了标签！'
-      addLog(message, 'warning')
-      notify.warning('请确保选择了原图、目标图并输入了标签！')
+    if (!label.trim()) {
+      notify.warning('请输入标签内容！')
       return
+    }
+
+    // 验证不同模式的输入
+    if (singleImageMode) {
+      // 单张模式：需要单张原图 + (单张目标图 或 目标图文件夹)
+      if (!singleOriginalImage) {
+        const message = '⚠️ 请先选择单张原图！'
+        addLog(message, 'warning')
+        notify.warning('请先选择单张原图！')
+        return
+      }
+
+      // 检查目标图：单张目标图 或 目标图文件夹
+      if (!singleTargetImage && (!targetImages || targetImages.length === 0 || !targetImages[currentIndex])) {
+        const message = '⚠️ 请选择单张目标图或加载目标图文件夹！'
+        addLog(message, 'warning')
+        notify.warning('请选择单张目标图或加载目标图文件夹！')
+        return
+      }
+    } else {
+      // 文件夹模式：需要原图文件夹 + 目标图文件夹
+      if (!originalImages[currentIndex] || !targetImages[currentIndex]) {
+        const message = '⚠️ 请确保加载了原图文件夹和目标图文件夹！'
+        addLog(message, 'warning')
+        notify.warning('请确保加载了原图文件夹和目标图文件夹！')
+        return
+      }
     }
 
     try {
@@ -87,15 +170,32 @@ function KontextTool() {
       await apiService.saveLabel(pairNumber, label.trim(), outputPath)
 
       // 复制并重命名图像文件
-      await apiService.copyRenameFiles(
-        originalImages[currentIndex].filename,
-        targetImages[currentIndex].filename,
-        pairNumber,
-        outputPath
-      )
+      let originalFile, targetFile
+
+      if (singleImageMode) {
+        // 单张原图模式
+        originalFile = singleOriginalImage.filename
+        // 优先使用单张目标图，否则使用目标图文件夹中的当前图
+        targetFile = singleTargetImage ? singleTargetImage.filename : targetImages[currentIndex].filename
+      } else {
+        // 文件夹模式：原图和目标图一一对应
+        originalFile = originalImages[currentIndex].filename
+        targetFile = targetImages[currentIndex].filename
+      }
+
+      await apiService.copyRenameFiles(originalFile, targetFile, pairNumber, outputPath)
 
       // 更新进度
-      const newProgress = Math.round(((currentIndex + 1) / originalImages.length) * 100)
+      let totalImages
+      if (singleImageMode) {
+        // 单张模式：如果有单张目标图就是1，否则是目标图文件夹的数量
+        totalImages = singleTargetImage ? 1 : targetImages.length
+      } else {
+        // 文件夹模式：取两个文件夹的最小值
+        totalImages = Math.min(originalImages.length, targetImages.length)
+      }
+
+      const newProgress = Math.round(((currentIndex + 1) / totalImages) * 100)
       setProgress(newProgress)
 
       addLog(`✅ 保存：第 ${currentIndex + 1} 对图像和标签`, 'success')
@@ -106,7 +206,15 @@ function KontextTool() {
         setLabel('')
       }
 
-      if (currentIndex < originalImages.length - 1 && currentIndex < targetImages.length - 1) {
+      // 移动到下一张图像
+      let maxIndex
+      if (singleImageMode) {
+        maxIndex = singleTargetImage ? 0 : targetImages.length - 1
+      } else {
+        maxIndex = Math.min(originalImages.length, targetImages.length) - 1
+      }
+
+      if (currentIndex < maxIndex) {
         setCurrentIndex(currentIndex + 1)
       } else {
         addLog('🎉 所有图像已标注完毕！', 'success')
@@ -120,7 +228,17 @@ function KontextTool() {
 
   const navigateImage = (direction) => {
     const newIndex = currentIndex + direction
-    if (newIndex >= 0 && newIndex < Math.min(originalImages.length, targetImages.length)) {
+    let maxIndex
+
+    if (singleImageMode) {
+      // 单张模式：如果有单张目标图就只有1张，否则是目标图文件夹的数量
+      maxIndex = singleTargetImage ? 1 : targetImages.length
+    } else {
+      // 文件夹模式：取两个文件夹的最小值
+      maxIndex = Math.min(originalImages.length, targetImages.length)
+    }
+
+    if (newIndex >= 0 && newIndex < maxIndex) {
       setCurrentIndex(newIndex)
       // 如果没有固定标签，清空标签
       if (!fixedLabel) {
@@ -167,28 +285,78 @@ function KontextTool() {
           padding: '1.5rem',
           border: '2px solid rgba(102, 126, 234, 0.1)'
         }}>
-          <button
-            className="btn btn-primary"
-            onClick={() => originalFilesRef.current?.click()}
-            style={{ width: '100%', marginBottom: '1.5rem' }}
-          >
-            📂 加载原图文件夹
-          </button>
+          {/* 模式切换按钮 */}
+          <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+            <button
+              className={`btn ${!singleImageMode ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => handleModeSwitch(false)}
+              style={{ flex: 1, fontSize: '0.9rem', padding: '0.5rem' }}
+            >
+              📂 文件夹模式
+            </button>
+            <button
+              className={`btn ${singleImageMode ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => handleModeSwitch(true)}
+              style={{ flex: 1, fontSize: '0.9rem', padding: '0.5rem' }}
+            >
+              🖼️ 单张模式
+            </button>
+          </div>
+
+          {/* 上传按钮 */}
+          {singleImageMode ? (
+            <button
+              className="btn btn-primary"
+              onClick={() => singleOriginalRef.current?.click()}
+              style={{ width: '100%', marginBottom: '1.5rem' }}
+            >
+              🖼️ 加载单张原图
+            </button>
+          ) : (
+            <button
+              className="btn btn-primary"
+              onClick={() => originalFilesRef.current?.click()}
+              style={{ width: '100%', marginBottom: '1.5rem' }}
+            >
+              📂 加载原图文件夹
+            </button>
+          )}
+
           <div className="image-container">
-            {originalImages[currentIndex] ? (
-              <img
-                src={`http://localhost:3004${originalImages[currentIndex].path}`}
-                alt="原图"
-                className="image-preview"
-              />
+            {singleImageMode ? (
+              // 单张原图模式显示
+              singleOriginalImage ? (
+                <img
+                  src={`http://localhost:3004${singleOriginalImage.path}`}
+                  alt="单张原图"
+                  className="image-preview"
+                />
+              ) : (
+                <div style={{
+                  fontSize: '1.2rem',
+                  color: '#667eea',
+                  fontWeight: '600'
+                }}>
+                  🖼️ 单张原图预览区
+                </div>
+              )
             ) : (
-              <div style={{
-                fontSize: '1.2rem',
-                color: '#667eea',
-                fontWeight: '600'
-              }}>
-                📷 原图预览区
-              </div>
+              // 文件夹模式显示
+              originalImages[currentIndex] ? (
+                <img
+                  src={`http://localhost:3004${originalImages[currentIndex].path}`}
+                  alt="原图"
+                  className="image-preview"
+                />
+              ) : (
+                <div style={{
+                  fontSize: '1.2rem',
+                  color: '#667eea',
+                  fontWeight: '600'
+                }}>
+                  📷 原图预览区
+                </div>
+              )
             )}
           </div>
         </div>
@@ -200,15 +368,44 @@ function KontextTool() {
           padding: '1.5rem',
           border: '2px solid rgba(118, 75, 162, 0.1)'
         }}>
-          <button
-            className="btn btn-primary"
-            onClick={() => targetFilesRef.current?.click()}
-            style={{ width: '100%', marginBottom: '1.5rem' }}
-          >
-            📂 加载目标图文件夹
-          </button>
+          {/* 目标图上传按钮 */}
+          {singleImageMode ? (
+            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => singleTargetRef.current?.click()}
+                style={{ flex: 1, fontSize: '0.9rem', padding: '0.5rem' }}
+              >
+                🖼️ 单张目标图
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => targetFilesRef.current?.click()}
+                style={{ flex: 1, fontSize: '0.9rem', padding: '0.5rem' }}
+              >
+                📂 目标图文件夹
+              </button>
+            </div>
+          ) : (
+            <button
+              className="btn btn-primary"
+              onClick={() => targetFilesRef.current?.click()}
+              style={{ width: '100%', marginBottom: '1.5rem' }}
+            >
+              📂 加载目标图文件夹
+            </button>
+          )}
+
           <div className="image-container">
-            {targetImages[currentIndex] ? (
+            {singleImageMode && singleTargetImage ? (
+              // 单张目标图模式显示
+              <img
+                src={`http://localhost:3004${singleTargetImage.path}`}
+                alt="单张目标图"
+                className="image-preview"
+              />
+            ) : targetImages[currentIndex] ? (
+              // 文件夹模式或单张原图+目标图文件夹模式显示
               <img
                 src={`http://localhost:3004${targetImages[currentIndex].path}`}
                 alt="目标图"
@@ -348,6 +545,38 @@ function KontextTool() {
       }}>
         💡 提示：使用左右箭头键可以快速切换图像对
       </div>
+
+      {/* 隐藏的文件输入元素 */}
+      <input
+        type="file"
+        ref={originalFilesRef}
+        onChange={handleOriginalImagesUpload}
+        multiple
+        accept="image/*"
+        style={{ display: 'none' }}
+      />
+      <input
+        type="file"
+        ref={targetFilesRef}
+        onChange={handleTargetImagesUpload}
+        multiple
+        accept="image/*"
+        style={{ display: 'none' }}
+      />
+      <input
+        type="file"
+        ref={singleOriginalRef}
+        onChange={handleSingleOriginalUpload}
+        accept="image/*"
+        style={{ display: 'none' }}
+      />
+      <input
+        type="file"
+        ref={singleTargetRef}
+        onChange={handleSingleTargetUpload}
+        accept="image/*"
+        style={{ display: 'none' }}
+      />
     </div>
   )
 }
