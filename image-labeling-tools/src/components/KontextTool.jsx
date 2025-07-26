@@ -11,7 +11,8 @@ function KontextTool() {
   const [outputPath, setOutputPath] = useState('')
   const [fixedLabel, setFixedLabel] = useState(false)
   const [log, setLog] = useState([])
-  const [singleImageMode, setSingleImageMode] = useState(false) // 新增：单张图片模式
+  const [singleOriginalMode, setSingleOriginalMode] = useState(false) // 新增：单张原图模式
+  const [singleTargetMode, setSingleTargetMode] = useState(false) // 新增：单张目标图模式
   const [singleOriginalImage, setSingleOriginalImage] = useState(null) // 新增：单张原图
   const [singleTargetImage, setSingleTargetImage] = useState(null) // 新增：单张目标图
 
@@ -25,20 +26,34 @@ function KontextTool() {
     setLog(prev => [...prev, { message, type, timestamp }])
   }
 
-  // 模式切换处理
-  const handleModeSwitch = (mode) => {
-    setSingleImageMode(mode)
+  // 原图模式切换处理
+  const handleOriginalModeSwitch = (mode) => {
+    setSingleOriginalMode(mode)
     setCurrentIndex(0)
     if (!fixedLabel) {
       setLabel('')
     }
 
     if (mode) {
-      addLog('🔄 切换到单张模式', 'info')
+      addLog('🔄 原图切换到单张模式', 'info')
     } else {
-      addLog('🔄 切换到文件夹模式', 'info')
-      // 清空单张图片数据
+      addLog('🔄 原图切换到文件夹模式', 'info')
       setSingleOriginalImage(null)
+    }
+  }
+
+  // 目标图模式切换处理
+  const handleTargetModeSwitch = (mode) => {
+    setSingleTargetMode(mode)
+    setCurrentIndex(0)
+    if (!fixedLabel) {
+      setLabel('')
+    }
+
+    if (mode) {
+      addLog('🔄 目标图切换到单张模式', 'info')
+    } else {
+      addLog('🔄 目标图切换到文件夹模式', 'info')
       setSingleTargetImage(null)
     }
   }
@@ -136,28 +151,36 @@ function KontextTool() {
     }
 
     // 验证不同模式的输入
-    if (singleImageMode) {
-      // 单张模式：需要单张原图 + (单张目标图 或 目标图文件夹)
+    // 检查原图
+    if (singleOriginalMode) {
       if (!singleOriginalImage) {
         const message = '⚠️ 请先选择单张原图！'
         addLog(message, 'warning')
         notify.warning('请先选择单张原图！')
         return
       }
-
-      // 检查目标图：单张目标图 或 目标图文件夹
-      if (!singleTargetImage && (!targetImages || targetImages.length === 0 || !targetImages[currentIndex])) {
-        const message = '⚠️ 请选择单张目标图或加载目标图文件夹！'
+    } else {
+      if (!originalImages || originalImages.length === 0 || !originalImages[currentIndex]) {
+        const message = '⚠️ 请先加载原图文件夹！'
         addLog(message, 'warning')
-        notify.warning('请选择单张目标图或加载目标图文件夹！')
+        notify.warning('请先加载原图文件夹！')
+        return
+      }
+    }
+
+    // 检查目标图
+    if (singleTargetMode) {
+      if (!singleTargetImage) {
+        const message = '⚠️ 请先选择单张目标图！'
+        addLog(message, 'warning')
+        notify.warning('请先选择单张目标图！')
         return
       }
     } else {
-      // 文件夹模式：需要原图文件夹 + 目标图文件夹
-      if (!originalImages[currentIndex] || !targetImages[currentIndex]) {
-        const message = '⚠️ 请确保加载了原图文件夹和目标图文件夹！'
+      if (!targetImages || targetImages.length === 0 || !targetImages[currentIndex]) {
+        const message = '⚠️ 请先加载目标图文件夹！'
         addLog(message, 'warning')
-        notify.warning('请确保加载了原图文件夹和目标图文件夹！')
+        notify.warning('请先加载目标图文件夹！')
         return
       }
     }
@@ -172,26 +195,35 @@ function KontextTool() {
       // 复制并重命名图像文件
       let originalFile, targetFile
 
-      if (singleImageMode) {
-        // 单张原图模式
+      // 根据原图模式选择原图文件
+      if (singleOriginalMode) {
         originalFile = singleOriginalImage.filename
-        // 优先使用单张目标图，否则使用目标图文件夹中的当前图
-        targetFile = singleTargetImage ? singleTargetImage.filename : targetImages[currentIndex].filename
       } else {
-        // 文件夹模式：原图和目标图一一对应
         originalFile = originalImages[currentIndex].filename
+      }
+
+      // 根据目标图模式选择目标图文件
+      if (singleTargetMode) {
+        targetFile = singleTargetImage.filename
+      } else {
         targetFile = targetImages[currentIndex].filename
       }
 
       await apiService.copyRenameFiles(originalFile, targetFile, pairNumber, outputPath)
 
-      // 更新进度
+      // 更新进度 - 根据不同模式组合计算总数
       let totalImages
-      if (singleImageMode) {
-        // 单张模式：如果有单张目标图就是1，否则是目标图文件夹的数量
-        totalImages = singleTargetImage ? 1 : targetImages.length
+      if (singleOriginalMode && singleTargetMode) {
+        // 单张对单张：只有1对
+        totalImages = 1
+      } else if (singleOriginalMode && !singleTargetMode) {
+        // 单张原图对文件夹目标图：目标图数量
+        totalImages = targetImages.length
+      } else if (!singleOriginalMode && singleTargetMode) {
+        // 文件夹原图对单张目标图：原图数量
+        totalImages = originalImages.length
       } else {
-        // 文件夹模式：取两个文件夹的最小值
+        // 文件夹对文件夹：取最小值
         totalImages = Math.min(originalImages.length, targetImages.length)
       }
 
@@ -208,9 +240,17 @@ function KontextTool() {
 
       // 移动到下一张图像
       let maxIndex
-      if (singleImageMode) {
-        maxIndex = singleTargetImage ? 0 : targetImages.length - 1
+      if (singleOriginalMode && singleTargetMode) {
+        // 单张对单张：只有1对，不需要移动
+        maxIndex = 0
+      } else if (singleOriginalMode && !singleTargetMode) {
+        // 单张原图对文件夹目标图：按目标图数量
+        maxIndex = targetImages.length - 1
+      } else if (!singleOriginalMode && singleTargetMode) {
+        // 文件夹原图对单张目标图：按原图数量
+        maxIndex = originalImages.length - 1
       } else {
+        // 文件夹对文件夹：取最小值
         maxIndex = Math.min(originalImages.length, targetImages.length) - 1
       }
 
@@ -230,11 +270,17 @@ function KontextTool() {
     const newIndex = currentIndex + direction
     let maxIndex
 
-    if (singleImageMode) {
-      // 单张模式：如果有单张目标图就只有1张，否则是目标图文件夹的数量
-      maxIndex = singleTargetImage ? 1 : targetImages.length
+    if (singleOriginalMode && singleTargetMode) {
+      // 单张对单张：只有1对
+      maxIndex = 1
+    } else if (singleOriginalMode && !singleTargetMode) {
+      // 单张原图对文件夹目标图：按目标图数量
+      maxIndex = targetImages.length
+    } else if (!singleOriginalMode && singleTargetMode) {
+      // 文件夹原图对单张目标图：按原图数量
+      maxIndex = originalImages.length
     } else {
-      // 文件夹模式：取两个文件夹的最小值
+      // 文件夹对文件夹：取最小值
       maxIndex = Math.min(originalImages.length, targetImages.length)
     }
 
@@ -288,15 +334,15 @@ function KontextTool() {
           {/* 模式切换按钮 */}
           <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
             <button
-              className={`btn ${!singleImageMode ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => handleModeSwitch(false)}
+              className={`btn ${!singleOriginalMode ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => handleOriginalModeSwitch(false)}
               style={{ flex: 1, fontSize: '0.9rem', padding: '0.5rem' }}
             >
               📂 文件夹模式
             </button>
             <button
-              className={`btn ${singleImageMode ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => handleModeSwitch(true)}
+              className={`btn ${singleOriginalMode ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => handleOriginalModeSwitch(true)}
               style={{ flex: 1, fontSize: '0.9rem', padding: '0.5rem' }}
             >
               🖼️ 单张模式
@@ -304,7 +350,7 @@ function KontextTool() {
           </div>
 
           {/* 上传按钮 */}
-          {singleImageMode ? (
+          {singleOriginalMode ? (
             <button
               className="btn btn-primary"
               onClick={() => singleOriginalRef.current?.click()}
@@ -323,7 +369,7 @@ function KontextTool() {
           )}
 
           <div className="image-container">
-            {singleImageMode ? (
+            {singleOriginalMode ? (
               // 单张原图模式显示
               singleOriginalImage ? (
                 <img
@@ -343,11 +389,16 @@ function KontextTool() {
             ) : (
               // 文件夹模式显示
               originalImages[currentIndex] ? (
-                <img
-                  src={`http://localhost:3004${originalImages[currentIndex].path}`}
-                  alt="原图"
-                  className="image-preview"
-                />
+                <div>
+                  <img
+                    src={`http://localhost:3004${originalImages[currentIndex].path}`}
+                    alt="原图"
+                    className="image-preview"
+                  />
+                  <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+                    {currentIndex + 1} / {originalImages.length}
+                  </div>
+                </div>
               ) : (
                 <div style={{
                   fontSize: '1.2rem',
@@ -368,24 +419,33 @@ function KontextTool() {
           padding: '1.5rem',
           border: '2px solid rgba(118, 75, 162, 0.1)'
         }}>
-          {/* 目标图上传按钮 */}
-          {singleImageMode ? (
-            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
-              <button
-                className="btn btn-primary"
-                onClick={() => singleTargetRef.current?.click()}
-                style={{ flex: 1, fontSize: '0.9rem', padding: '0.5rem' }}
-              >
-                🖼️ 单张目标图
-              </button>
-              <button
-                className="btn btn-secondary"
-                onClick={() => targetFilesRef.current?.click()}
-                style={{ flex: 1, fontSize: '0.9rem', padding: '0.5rem' }}
-              >
-                📂 目标图文件夹
-              </button>
-            </div>
+          {/* 模式切换按钮 */}
+          <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+            <button
+              className={`btn ${!singleTargetMode ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => handleTargetModeSwitch(false)}
+              style={{ flex: 1, fontSize: '0.9rem', padding: '0.5rem' }}
+            >
+              📂 文件夹模式
+            </button>
+            <button
+              className={`btn ${singleTargetMode ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => handleTargetModeSwitch(true)}
+              style={{ flex: 1, fontSize: '0.9rem', padding: '0.5rem' }}
+            >
+              🖼️ 单张模式
+            </button>
+          </div>
+
+          {/* 上传按钮 */}
+          {singleTargetMode ? (
+            <button
+              className="btn btn-primary"
+              onClick={() => singleTargetRef.current?.click()}
+              style={{ width: '100%', marginBottom: '1.5rem' }}
+            >
+              🖼️ 加载单张目标图
+            </button>
           ) : (
             <button
               className="btn btn-primary"
@@ -397,28 +457,45 @@ function KontextTool() {
           )}
 
           <div className="image-container">
-            {singleImageMode && singleTargetImage ? (
+            {singleTargetMode ? (
               // 单张目标图模式显示
-              <img
-                src={`http://localhost:3004${singleTargetImage.path}`}
-                alt="单张目标图"
-                className="image-preview"
-              />
-            ) : targetImages[currentIndex] ? (
-              // 文件夹模式或单张原图+目标图文件夹模式显示
-              <img
-                src={`http://localhost:3004${targetImages[currentIndex].path}`}
-                alt="目标图"
-                className="image-preview"
-              />
+              singleTargetImage ? (
+                <img
+                  src={`http://localhost:3004${singleTargetImage.path}`}
+                  alt="单张目标图"
+                  className="image-preview"
+                />
+              ) : (
+                <div style={{
+                  fontSize: '1.2rem',
+                  color: '#764ba2',
+                  fontWeight: '600'
+                }}>
+                  🖼️ 单张目标图预览区
+                </div>
+              )
             ) : (
-              <div style={{
-                fontSize: '1.2rem',
-                color: '#764ba2',
-                fontWeight: '600'
-              }}>
-                📷 目标图预览区
-              </div>
+              // 文件夹模式显示
+              targetImages[currentIndex] ? (
+                <div>
+                  <img
+                    src={`http://localhost:3004${targetImages[currentIndex].path}`}
+                    alt="目标图"
+                    className="image-preview"
+                  />
+                  <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+                    {currentIndex + 1} / {targetImages.length}
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  fontSize: '1.2rem',
+                  color: '#764ba2',
+                  fontWeight: '600'
+                }}>
+                  📷 目标图预览区
+                </div>
+              )
             )}
           </div>
         </div>
@@ -472,24 +549,45 @@ function KontextTool() {
         <button
           className="btn btn-success"
           onClick={saveLabel}
-          disabled={!originalImages[currentIndex] || !targetImages[currentIndex] || !label.trim()}
+          disabled={!label.trim() ||
+            (singleOriginalMode && !singleOriginalImage) ||
+            (!singleOriginalMode && (!originalImages[currentIndex])) ||
+            (singleTargetMode && !singleTargetImage) ||
+            (!singleTargetMode && (!targetImages[currentIndex]))
+          }
         >
-          💾 保存第 {currentIndex + 1} 对
+          💾 保存{(singleOriginalMode && singleTargetMode) ? '' : `第 ${currentIndex + 1} 对`}
         </button>
-        <button
-          className="btn btn-secondary"
-          onClick={() => navigateImage(-1)}
-          disabled={currentIndex <= 0}
-        >
-          ◀️ 上一对
-        </button>
-        <button
-          className="btn btn-secondary"
-          onClick={() => navigateImage(1)}
-          disabled={currentIndex >= Math.min(originalImages.length, targetImages.length) - 1}
-        >
-          ▶️ 下一对
-        </button>
+
+        {/* 只在非单张对单张模式下显示导航按钮 */}
+        {!(singleOriginalMode && singleTargetMode) && (
+          <>
+            <button
+              className="btn btn-secondary"
+              onClick={() => navigateImage(-1)}
+              disabled={currentIndex <= 0}
+            >
+              ◀️ 上一对
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => navigateImage(1)}
+              disabled={(() => {
+                let maxIndex
+                if (singleOriginalMode && !singleTargetMode) {
+                  maxIndex = targetImages.length - 1
+                } else if (!singleOriginalMode && singleTargetMode) {
+                  maxIndex = originalImages.length - 1
+                } else {
+                  maxIndex = Math.min(originalImages.length, targetImages.length) - 1
+                }
+                return currentIndex >= maxIndex
+              })()}
+            >
+              ▶️ 下一对
+            </button>
+          </>
+        )}
       </div>
 
       {outputPath && (
@@ -552,6 +650,7 @@ function KontextTool() {
         ref={originalFilesRef}
         onChange={handleOriginalImagesUpload}
         multiple
+        webkitdirectory=""
         accept="image/*"
         style={{ display: 'none' }}
       />
@@ -560,6 +659,7 @@ function KontextTool() {
         ref={targetFilesRef}
         onChange={handleTargetImagesUpload}
         multiple
+        webkitdirectory=""
         accept="image/*"
         style={{ display: 'none' }}
       />
