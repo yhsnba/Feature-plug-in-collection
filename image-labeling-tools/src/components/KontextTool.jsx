@@ -550,6 +550,34 @@ function KontextTool() {
         </div>
       </div>
 
+      {/* 状态显示区域 */}
+      {((!singleOriginalMode && !singleTargetMode) ||
+        (singleOriginalMode && !singleTargetMode) ||
+        (!singleOriginalMode && singleTargetMode)) && (
+        <div style={{
+          background: 'rgba(102, 126, 234, 0.1)',
+          borderRadius: '12px',
+          padding: '1rem',
+          marginBottom: '1rem',
+          textAlign: 'center',
+          border: '2px solid rgba(102, 126, 234, 0.2)'
+        }}>
+          <span style={{
+            fontWeight: '600',
+            color: '#2d3748',
+            fontSize: '1.1rem'
+          }}>
+            {singleOriginalMode && !singleTargetMode ? (
+              <>📌 当前组：第 {currentIndex + 1} 张 / 共 {targetImages.length} 张<br/>🔢 下一张编号：第 {currentIndex + 1} 张</>
+            ) : !singleOriginalMode && singleTargetMode ? (
+              <>📌 当前组：第 {currentIndex + 1} 张 / 共 {originalImages.length} 张<br/>🔢 下一张编号：第 {currentIndex + 1} 张</>
+            ) : (
+              <>📌 当前组：第 {currentIndex + 1} 张 / 共 {Math.min(originalImages.length, targetImages.length)} 张<br/>🔢 下一张编号：第 {currentIndex + 1} 张</>
+            )}
+          </span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <button className="btn btn-secondary" onClick={handleOutputPathSelect}>
           📂 设置输出路径
