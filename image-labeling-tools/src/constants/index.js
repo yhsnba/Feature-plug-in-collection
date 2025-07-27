@@ -150,3 +150,109 @@ export const DEPLOYMENT_CONFIG = {
     FAILED: 'failed'
   }
 }
+
+// 任务管理配置
+export const TASK_CONFIG = {
+  STATUS: {
+    TODO: 'todo',
+    IN_PROGRESS: 'in_progress',
+    IN_REVIEW: 'in_review',
+    COMPLETED: 'completed',
+    CANCELLED: 'cancelled'
+  },
+  PRIORITIES: {
+    LOW: 'low',
+    MEDIUM: 'medium',
+    HIGH: 'high',
+    URGENT: 'urgent'
+  },
+  TYPES: {
+    FEATURE: 'feature',
+    BUG: 'bug',
+    IMPROVEMENT: 'improvement',
+    RESEARCH: 'research',
+    DOCUMENTATION: 'documentation'
+  },
+  LABELS: {
+    FRONTEND: 'frontend',
+    BACKEND: 'backend',
+    DESIGN: 'design',
+    TESTING: 'testing',
+    DEPLOYMENT: 'deployment'
+  }
+}
+
+// 时间跟踪配置
+export const TIME_TRACKING_CONFIG = {
+  UNITS: {
+    HOURS: 'hours',
+    DAYS: 'days',
+    WEEKS: 'weeks'
+  },
+  SESSION_STATUS: {
+    ACTIVE: 'active',
+    PAUSED: 'paused',
+    STOPPED: 'stopped'
+  }
+}
+
+// 服务权限配置
+export const SERVICE_CONFIG = {
+  // 可用服务类型
+  SERVICES: {
+    FLUX: 'flux',
+    KONTEXT: 'kontext',
+    TAG: 'tag',
+    TASK_MANAGEMENT: 'task_management',
+    TIME_TRACKING: 'time_tracking',
+    PROGRESS_ANALYSIS: 'progress_analysis',
+    DEPLOYMENT: 'deployment'
+  },
+
+  // 服务包配置
+  PACKAGES: {
+    BASIC: {
+      id: 'basic',
+      name: '基础版',
+      services: ['kontext'],
+      description: '仅包含Kontext标注工具'
+    },
+    STANDARD: {
+      id: 'standard',
+      name: '标准版',
+      services: ['flux', 'kontext', 'task_management'],
+      description: '包含Flux和Kontext工具，以及任务管理'
+    },
+    PROFESSIONAL: {
+      id: 'professional',
+      name: '专业版',
+      services: ['flux', 'kontext', 'tag', 'task_management', 'time_tracking'],
+      description: '包含所有标注工具和项目管理功能'
+    },
+    ENTERPRISE: {
+      id: 'enterprise',
+      name: '企业版',
+      services: ['flux', 'kontext', 'tag', 'task_management', 'time_tracking', 'progress_analysis', 'deployment'],
+      description: '包含所有功能'
+    }
+  },
+
+  // 功能权限映射
+  FEATURE_PERMISSIONS: {
+    // 项目类型权限
+    PROJECT_TYPES: {
+      flux: ['flux'],
+      kontext: ['kontext'],
+      tag: ['tag'],
+      custom: ['flux', 'kontext', 'tag'] // 自定义需要所有工具权限
+    },
+
+    // 功能模块权限
+    MODULES: {
+      task_manager: ['task_management'],
+      time_tracker: ['time_tracking'],
+      progress_analysis: ['progress_analysis'],
+      deployment_manager: ['deployment']
+    }
+  }
+}

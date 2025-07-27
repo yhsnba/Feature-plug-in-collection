@@ -829,6 +829,62 @@ label:hover {
   font-family: 'Courier New', monospace;
 }
 
+/* 权限错误页面样式 */
+.permission-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+}
+
+.permission-error .error-content {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 3rem;
+  text-align: center;
+  max-width: 600px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(20px);
+}
+
+.permission-error .error-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.permission-error h2 {
+  color: #d69e2e;
+  margin-bottom: 1rem;
+  font-size: 2rem;
+}
+
+.permission-error p {
+  color: #4a5568;
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+}
+
+.permission-error .client-info {
+  background: rgba(102, 126, 234, 0.1);
+  padding: 1.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  margin: 1.5rem 0;
+  text-align: left;
+}
+
+.permission-error .client-info p {
+  margin-bottom: 0.5rem;
+  color: #4a5568;
+  font-size: 1rem;
+}
+
+.permission-error .error-actions {
+  margin-bottom: 2rem;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .tool-container {

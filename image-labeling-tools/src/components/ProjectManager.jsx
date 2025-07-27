@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { PROJECT_CONFIG, CLIENT_CONFIG } from '../constants'
+import { PROJECT_CONFIG, CLIENT_CONFIG, SERVICE_CONFIG } from '../constants'
 import { useLocalStorage } from '../hooks'
+import { PermissionManager } from '../utils/permissions'
 import DeploymentManager from './DeploymentManager'
+import TaskManager from './TaskManager'
 import './ProjectManager.css'
 
 const ProjectManager = ({ onProjectSelect, onNavigate }) => {
@@ -10,7 +12,10 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
   const [activeView, setActiveView] = useState('dashboard')
   const [selectedProject, setSelectedProject] = useState(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [showClientModal, setShowClientModal] = useState(false)
+  const [showTaskManager, setShowTaskManager] = useState(false)
+  const [taskManagerProjectId, setTaskManagerProjectId] = useState(null)
 
   // 创建新项目的表单数据
   const [newProject, setNewProject] = useState({
@@ -34,7 +39,9 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
     type: CLIENT_CONFIG.TYPES.ENTERPRISE,
     industry: CLIENT_CONFIG.INDUSTRIES.AI_ML,
     description: '',
-    requirements: ''
+    requirements: '',
+    package: 'basic', // 默认基础版
+    services: [] // 将根据package自动设置
   })
 
   // 获取项目统计信息
@@ -74,13 +81,30 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
     setShowCreateModal(false)
   }
 
+  // 编辑项目
+  const handleEditProject = () => {
+    if (!selectedProject.name.trim()) return
+
+    const updatedProjects = projects.map(project =>
+      project.id === selectedProject.id ? selectedProject : project
+    )
+
+    setProjects(updatedProjects)
+    setShowEditModal(false)
+    setSelectedProject(null)
+  }
+
   // 创建新甲方
   const handleCreateClient = () => {
     if (!newClient.name.trim()) return
 
+    // 根据选择的服务包设置服务权限
+    const services = PermissionManager.getServicesFromPackage(newClient.package)
+
     const client = {
       id: Date.now().toString(),
       ...newClient,
+      services, // 设置服务权限
       status: CLIENT_CONFIG.STATUS.ACTIVE,
       createdAt: new Date().toISOString(),
       projects: []
@@ -95,7 +119,9 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
       type: CLIENT_CONFIG.TYPES.ENTERPRISE,
       industry: CLIENT_CONFIG.INDUSTRIES.AI_ML,
       description: '',
-      requirements: ''
+      requirements: '',
+      package: 'basic',
+      services: []
     })
     setShowClientModal(false)
   }
@@ -111,6 +137,34 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
   const getClientName = (clientId) => {
     const client = clients.find(c => c.id === clientId)
     return client ? client.name : '未指定甲方'
+  }
+
+  // 获取选中甲方的可用项目类型
+  const getAvailableProjectTypes = () => {
+    if (!newProject.clientId) {
+      return []
+    }
+    const client = clients.find(c => c.id === newProject.clientId)
+    return client ? PermissionManager.getAvailableProjectTypes(client) : []
+  }
+
+  // 检查甲方是否可以使用指定功能模块
+  const canUseModule = (projectId, module) => {
+    const project = projects.find(p => p.id === projectId)
+    const client = project ? clients.find(c => c.id === project.clientId) : null
+    return project && client ? PermissionManager.canUseModule(project, client, module) : false
+  }
+
+  // 打开任务管理器
+  const openTaskManager = (projectId) => {
+    setTaskManagerProjectId(projectId)
+    setShowTaskManager(true)
+  }
+
+  // 关闭任务管理器
+  const closeTaskManager = () => {
+    setShowTaskManager(false)
+    setTaskManagerProjectId(null)
   }
 
   // 获取状态颜色
@@ -246,12 +300,20 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
                         </span>
                       </div>
                       <div className="pm-project-actions">
-                        <button 
+                        <button
                           className="btn btn-sm btn-primary"
                           onClick={() => onProjectSelect(project)}
                         >
                           打开项目
                         </button>
+                        {canUseModule(project.id, 'task_manager') && (
+                          <button
+                            className="btn btn-sm btn-secondary"
+                            onClick={() => openTaskManager(project.id)}
+                          >
+                            📋 任务
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -299,19 +361,30 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
                       </span>
                     </div>
                     <div className="pm-project-actions">
-                      <button 
+                      <button
                         className="btn btn-sm btn-primary"
                         onClick={() => onProjectSelect(project)}
                       >
                         打开
                       </button>
-                      <button 
+                      {canUseModule(project.id, 'task_manager') && (
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => openTaskManager(project.id)}
+                        >
+                          📋 任务
+                        </button>
+                      )}
+                      <button
                         className="btn btn-sm btn-secondary"
-                        onClick={() => setSelectedProject(project)}
+                        onClick={() => {
+                          setSelectedProject(project)
+                          setShowEditModal(true)
+                        }}
                       >
                         编辑
                       </button>
-                      <button 
+                      <button
                         className="btn btn-sm btn-danger"
                         onClick={() => handleDeleteProject(project.id)}
                       >
@@ -348,9 +421,11 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
                       <p><strong>邮箱:</strong> {client.email}</p>
                       <p><strong>电话:</strong> {client.phone}</p>
                       <p><strong>行业:</strong> {client.industry}</p>
+                      <p><strong>服务包:</strong> {PermissionManager.getPackageInfo(client.package)?.name || '未设置'}</p>
                     </div>
                     <div className="pm-client-projects">
                       <p><strong>项目数:</strong> {projects.filter(p => p.clientId === client.id).length}</p>
+                      <p><strong>可用服务:</strong> {client.services?.join(', ') || '无'}</p>
                     </div>
                   </div>
                 ))}
@@ -411,11 +486,29 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
                   <select
                     value={newProject.type}
                     onChange={e => setNewProject({...newProject, type: e.target.value})}
+                    disabled={!newProject.clientId}
                   >
-                    <option value={PROJECT_CONFIG.TYPES.FLUX}>Flux拼接工具</option>
-                    <option value={PROJECT_CONFIG.TYPES.KONTEXT}>Kontext标注工具</option>
-                    <option value={PROJECT_CONFIG.TYPES.TAG}>专业标注工具</option>
-                    <option value={PROJECT_CONFIG.TYPES.CUSTOM}>自定义</option>
+                    {!newProject.clientId ? (
+                      <option value="">请先选择甲方</option>
+                    ) : (
+                      <>
+                        {getAvailableProjectTypes().includes(PROJECT_CONFIG.TYPES.FLUX) && (
+                          <option value={PROJECT_CONFIG.TYPES.FLUX}>Flux拼接工具</option>
+                        )}
+                        {getAvailableProjectTypes().includes(PROJECT_CONFIG.TYPES.KONTEXT) && (
+                          <option value={PROJECT_CONFIG.TYPES.KONTEXT}>Kontext标注工具</option>
+                        )}
+                        {getAvailableProjectTypes().includes(PROJECT_CONFIG.TYPES.TAG) && (
+                          <option value={PROJECT_CONFIG.TYPES.TAG}>专业标注工具</option>
+                        )}
+                        {getAvailableProjectTypes().includes(PROJECT_CONFIG.TYPES.CUSTOM) && (
+                          <option value={PROJECT_CONFIG.TYPES.CUSTOM}>自定义</option>
+                        )}
+                        {getAvailableProjectTypes().length === 0 && (
+                          <option value="">该甲方暂无可用项目类型</option>
+                        )}
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
@@ -448,6 +541,105 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
               </button>
               <button className="btn btn-primary" onClick={handleCreateProject}>
                 创建项目
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 编辑项目模态框 */}
+      {showEditModal && selectedProject && (
+        <div className="pm-modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="pm-modal" onClick={e => e.stopPropagation()}>
+            <div className="pm-modal-header">
+              <h3>编辑项目</h3>
+              <button onClick={() => setShowEditModal(false)}>✕</button>
+            </div>
+            <div className="pm-modal-body">
+              <div className="pm-form-row">
+                <div className="pm-form-group">
+                  <label>项目名称</label>
+                  <input
+                    type="text"
+                    value={selectedProject.name}
+                    onChange={(e) => setSelectedProject({...selectedProject, name: e.target.value})}
+                    placeholder="输入项目名称"
+                  />
+                </div>
+                <div className="pm-form-group">
+                  <label>甲方</label>
+                  <select
+                    value={selectedProject.clientId}
+                    onChange={(e) => setSelectedProject({...selectedProject, clientId: e.target.value})}
+                  >
+                    <option value="">选择甲方</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>{client.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="pm-form-group">
+                <label>项目描述</label>
+                <textarea
+                  value={selectedProject.description}
+                  onChange={(e) => setSelectedProject({...selectedProject, description: e.target.value})}
+                  placeholder="详细描述项目内容和目标"
+                  rows="3"
+                />
+              </div>
+              <div className="pm-form-row">
+                <div className="pm-form-group">
+                  <label>项目类型</label>
+                  <select
+                    value={selectedProject.type}
+                    onChange={(e) => setSelectedProject({...selectedProject, type: e.target.value})}
+                  >
+                    <option value={PROJECT_CONFIG.TYPES.FLUX}>Flux</option>
+                    <option value={PROJECT_CONFIG.TYPES.STABLE_DIFFUSION}>Stable Diffusion</option>
+                    <option value={PROJECT_CONFIG.TYPES.MIDJOURNEY}>Midjourney</option>
+                    <option value={PROJECT_CONFIG.TYPES.CUSTOM}>自定义</option>
+                  </select>
+                </div>
+                <div className="pm-form-group">
+                  <label>优先级</label>
+                  <select
+                    value={selectedProject.priority}
+                    onChange={(e) => setSelectedProject({...selectedProject, priority: e.target.value})}
+                  >
+                    <option value={PROJECT_CONFIG.PRIORITIES.LOW}>低</option>
+                    <option value={PROJECT_CONFIG.PRIORITIES.MEDIUM}>中</option>
+                    <option value={PROJECT_CONFIG.PRIORITIES.HIGH}>高</option>
+                    <option value={PROJECT_CONFIG.PRIORITIES.URGENT}>紧急</option>
+                  </select>
+                </div>
+              </div>
+              <div className="pm-form-row">
+                <div className="pm-form-group">
+                  <label>截止日期</label>
+                  <input
+                    type="date"
+                    value={selectedProject.deadline}
+                    onChange={(e) => setSelectedProject({...selectedProject, deadline: e.target.value})}
+                  />
+                </div>
+                <div className="pm-form-group">
+                  <label>预算</label>
+                  <input
+                    type="text"
+                    value={selectedProject.budget}
+                    onChange={(e) => setSelectedProject({...selectedProject, budget: e.target.value})}
+                    placeholder="输入项目预算"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="pm-modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowEditModal(false)}>
+                取消
+              </button>
+              <button className="btn btn-primary" onClick={handleEditProject}>
+                保存修改
               </button>
             </div>
           </div>
@@ -533,6 +725,17 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
                 </div>
               </div>
               <div className="pm-form-group">
+                <label>服务包</label>
+                <select
+                  value={newClient.package}
+                  onChange={e => setNewClient({...newClient, package: e.target.value})}
+                >
+                  {Object.entries(SERVICE_CONFIG.PACKAGES).map(([key, pkg]) => (
+                    <option key={key} value={pkg.id}>{pkg.name} - {pkg.description}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="pm-form-group">
                 <label>需求描述</label>
                 <textarea
                   value={newClient.requirements}
@@ -551,6 +754,14 @@ const ProjectManager = ({ onProjectSelect, onNavigate }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 任务管理器 */}
+      {showTaskManager && taskManagerProjectId && (
+        <TaskManager
+          projectId={taskManagerProjectId}
+          onClose={closeTaskManager}
+        />
       )}
     </div>
   )
